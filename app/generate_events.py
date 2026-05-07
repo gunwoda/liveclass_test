@@ -6,20 +6,23 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
-# 생성할 이벤트 타입 목록
+# 실제 웹 서비스에서 흔히 남기는 사용자 행동을 단순화한 이벤트 타입이다.
+# 메인 파이프라인(app/main.py)은 이 값들로 이벤트를 만든 뒤 바로 MySQL에 저장한다.
 EVENT_TYPES = ("page_view", "click", "purchase", "error")
 
-# 이벤트가 발생할 수 있는 페이지 목록
+# page_view, click, error 이벤트가 발생할 수 있는 샘플 페이지 목록이다.
 PAGES = ("/", "/courses", "/courses/python", "/checkout", "/help")
 
-# error 이벤트 발생 시 사용할 에러 코드 목록
+# error 이벤트를 분석할 때 단순 집계가 가능하도록 에러 코드를 몇 가지로 제한한다.
 ERROR_CODES = ("E_TIMEOUT", "E_PAYMENT_FAILED", "E_NOT_FOUND", "E_INTERNAL")
 
 
 def random_event() -> dict:
     """
     랜덤한 웹 서비스 이벤트 1개를 생성한다.
-    이벤트 타입에 따라 purchase, error 관련 필드를 추가로 설정한다.
+
+    모든 이벤트는 같은 dict 구조를 가진다. 이벤트 타입에 따라 사용하지 않는
+    필드는 None으로 두고, MySQL 저장 시 이 값들이 NULL 컬럼으로 들어간다.
     """
 
     # 이벤트 타입을 가중치 기반으로 랜덤 선택
@@ -30,14 +33,14 @@ def random_event() -> dict:
         k=1,
     )[0]
 
-    # 현재 UTC 시간 기준 최근 48시간 이내의 랜덤한 생성 시간 생성
+    # 시간대별 분석을 할 수 있도록 최근 48시간 안에서 발생 시간을 흩뿌린다.
     created_at = datetime.now(timezone.utc) - timedelta(
         hours=random.randint(0, 47),
         minutes=random.randint(0, 59),
         seconds=random.randint(0, 59),
     )
 
-    # 모든 이벤트가 공통으로 가지는 기본 필드 구성
+    # 단일 events 테이블에 넣기 위해 모든 이벤트가 같은 필드 세트를 갖게 한다.
     event = {
         "event_id": str(uuid.uuid4()),          # 이벤트 고유 ID
         "user_id": random.randint(1, 100),      # 사용자 ID
@@ -49,13 +52,13 @@ def random_event() -> dict:
         "created_at": created_at.isoformat(),   # ISO 형식의 이벤트 생성 시간
     }
 
-    # 구매 이벤트인 경우 상품 ID, 결제 금액, 페이지 정보 설정
+    # 구매 이벤트는 매출/전환 분석에 필요한 상품 ID와 결제 금액을 채운다.
     if event_type == "purchase":
         event["product_id"] = random.randint(1000, 1015)
         event["amount"] = round(random.uniform(9.9, 199.9), 2)
         event["page"] = "/checkout"
 
-    # 에러 이벤트인 경우 에러 코드 설정
+    # 에러 이벤트는 장애 비율과 에러 코드별 집계를 할 수 있도록 error_code를 채운다.
     elif event_type == "error":
         event["error_code"] = random.choice(ERROR_CODES)
 
@@ -72,14 +75,17 @@ def generate_events(count: int) -> list[dict]:
 
 def write_jsonl(events: list[dict], output_path: Path) -> None:
     """
-    이벤트 목록을 JSONL 파일로 저장한다.
-    JSONL은 한 줄에 하나의 JSON 객체를 저장하는 형식이다.
+    테스트/샘플 확인용으로 이벤트 목록을 JSONL 파일에 저장한다.
+
+    실제 과제 파이프라인은 app/main.py에서 생성한 이벤트를 바로 MySQL에 저장한다.
+    이 함수는 DB 없이 이벤트 모양을 빠르게 확인하거나 테스트 데이터를 눈으로
+    검토할 때만 사용하는 보조 기능이다.
     """
 
     # 출력 디렉터리가 없으면 생성
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 이벤트를 한 줄씩 JSON 문자열로 변환하여 파일에 기록
+    # JSONL은 한 줄에 이벤트 하나를 저장해서 샘플 확인과 diff 확인이 쉽다.
     with output_path.open("w", encoding="utf-8") as file:
         for event in events:
             file.write(json.dumps(event, ensure_ascii=False) + "\n")
@@ -87,9 +93,11 @@ def write_jsonl(events: list[dict], output_path: Path) -> None:
 
 def parse_args() -> argparse.Namespace:
     """
-    커맨드라인 인자를 파싱한다.
+    테스트용 JSONL 생성 커맨드의 인자를 파싱한다.
+
+    DB 저장까지 수행하려면 이 파일이 아니라 app/main.py를 실행한다.
     --count: 생성할 이벤트 개수
-    --output: 저장할 JSONL 파일 경로
+    --output: 테스트/샘플용 JSONL 파일 경로
     """
 
     parser = argparse.ArgumentParser(description="Generate random web service events.")
@@ -107,7 +115,7 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=Path("output/events.jsonl"),
-        help="JSONL output path",
+        help="sample JSONL output path for testing",
     )
 
     return parser.parse_args()
@@ -115,8 +123,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """
-    프로그램의 시작 지점.
-    인자를 읽고, 이벤트를 생성한 뒤, JSONL 파일로 저장한다.
+    테스트용 샘플 이벤트 파일을 만든다.
+
+    이 진입점은 DB 저장용이 아니다. 실제 파이프라인 실행은 app/main.py가 담당한다.
     """
 
     # 커맨드라인 인자 파싱
