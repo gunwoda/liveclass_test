@@ -8,10 +8,6 @@
 
 ## 실행 방법
 
-```bash
-python3 app/generate_events.py --count 1000 --output output/events.jsonl
-```
-
 MySQL 접속 정보는 환경 변수로 설정합니다.
 
 ```bash
@@ -26,8 +22,10 @@ export MYSQL_DATABASE=events_db
 
 ```bash
 mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" < sql/init.sql
-python3 app/store_events.py --input output/events.jsonl
+python3 app/main.py --count 1000
 ```
+
+`app/main.py`는 이벤트를 메모리에서 생성한 뒤 바로 MySQL에 저장합니다. `app/generate_events.py`의 JSONL 출력 기능은 생성되는 이벤트 샘플을 확인하기 위한 보조 실행 경로입니다.
 
 Docker Compose로 MySQL까지 자동 실행하는 구성은 다음 브랜치에서 추가할 예정입니다.
 
