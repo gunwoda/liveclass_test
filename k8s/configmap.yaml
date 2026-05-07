@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-pipeline-config
+data:
+  MYSQL_HOST: mysql.default.svc.cluster.local
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: events_db
+  EVENT_COUNT: "1000"

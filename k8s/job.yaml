@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: event-generator-job
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: event-generator
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: event-generator
+          image: event-log-pipeline:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python"]
+          args: ["main.py", "--count", "$(EVENT_COUNT)"]
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: event-pipeline-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: event-pipeline-config
+                  key: MYSQL_PORT
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: event-pipeline-config
+                  key: MYSQL_DATABASE
+            - name: EVENT_COUNT
+              valueFrom:
+                configMapKeyRef:
+                  name: event-pipeline-config
+                  key: EVENT_COUNT
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: event-pipeline-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: event-pipeline-secret
+                  key: MYSQL_PASSWORD

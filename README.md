@@ -4,7 +4,7 @@
 
 ## 현재 브랜치 범위
 
-`part-5-visualization` 브랜치는 Step 5 결과 시각화를 추가합니다.
+`part-6-kubernetes` 브랜치는 선택 과제 A Kubernetes manifest와 설명을 추가합니다.
 
 ## 실행 방법
 
@@ -138,3 +138,17 @@ Docker Compose 실행 후 생성된 이미지를 README에서 함께 확인할 �
 ![Event count by type](output/charts/event_type_counts.png)
 
 ![Hourly event trend](output/charts/hourly_trend.png)
+
+## 선택 과제 A: Kubernetes
+
+Kubernetes manifest는 [k8s](./k8s)에 작성했습니다. 실제 클러스터 배포는 수행하지 않고, 이벤트 생성기 앱을 Kubernetes에서 실행한다고 가정한 설정 파일입니다.
+
+| 파일 | 리소스 | 역할 |
+| --- | --- | --- |
+| `k8s/job.yaml` | Job | 이벤트 생성기 컨테이너를 실행하고, 지정한 개수의 이벤트를 생성한 뒤 MySQL에 저장합니다. |
+| `k8s/configmap.yaml` | ConfigMap | DB host, port, database name, 이벤트 생성 수처럼 환경마다 바뀔 수 있는 일반 설정을 관리합니다. |
+| `k8s/secret.yaml` | Secret | MySQL 사용자명과 비밀번호처럼 코드에 직접 남기기 부담스러운 값을 관리합니다. |
+
+이벤트 생성기는 요청을 계속 받는 서버가 아니라 실행 후 종료되는 배치 작업에 가깝기 때문에 `Deployment`보다 `Job`을 선택했습니다. `Job`은 실패 시 재시도 정책을 둘 수 있고, 이벤트 생성과 저장이 끝나면 Pod가 종료되어 작업 완료 여부를 확인하기 쉽습니다.
+
+`ConfigMap`과 `Secret`은 설정값과 민감 정보를 분리하기 위해 선택했습니다. 이렇게 분리하면 이미지 재빌드 없이 DB 주소나 이벤트 생성 수를 바꿀 수 있고, 비밀번호를 일반 manifest나 코드에 직접 적는 범위를 줄일 수 있습니다.
