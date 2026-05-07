@@ -4,7 +4,7 @@
 
 ## 현재 브랜치 범위
 
-`part-4-docker-compose` 브랜치는 Step 4 Docker Compose 실행 구성을 추가합니다.
+`part-5-visualization` 브랜치는 Step 5 결과 시각화를 추가합니다.
 
 ## 실행 방법
 
@@ -14,12 +14,19 @@ Docker Compose로 MySQL과 Python 앱을 함께 실행합니다.
 docker compose up --build
 ```
 
-실행하면 MySQL 컨테이너가 먼저 준비되고, Python 앱이 이벤트 1,000건을 생성한 뒤 MySQL `events` 테이블에 저장합니다.
+실행하면 MySQL 컨테이너가 먼저 준비되고, Python 앱이 이벤트 1,000건을 생성한 뒤 MySQL `events` 테이블에 저장합니다. 이후 집계 결과를 차트 이미지로 저장합니다.
 
 저장된 데이터를 확인하려면 다른 터미널에서 아래 명령어를 실행합니다.
 
 ```bash
 docker compose run --rm app python analyze_events.py
+```
+
+생성된 차트 이미지는 아래 경로에 저장됩니다.
+
+```text
+output/charts/event_type_counts.png
+output/charts/hourly_trend.png
 ```
 
 데이터를 초기화하고 처음부터 다시 실행하려면 볼륨까지 삭제합니다.
@@ -116,3 +123,18 @@ ORDER BY event_count DESC;
 
 `app` 서비스는 `db`의 healthcheck가 성공한 뒤 실행됩니다. 따라서 `docker compose up --build` 한 번으로 이벤트 생성부터 저장까지 자동으로 동작합니다.
 MySQL은 Compose 내부 네트워크에서만 사용하므로 호스트의 3306 포트를 사용 중이어도 실행할 수 있습니다.
+
+## 시각화 결과
+
+시각화는 [app/visualize_events.py](./app/visualize_events.py)에서 수행합니다. MySQL에 저장된 데이터를 SQL 집계로 조회한 뒤, Matplotlib으로 PNG 파일을 생성합니다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `output/charts/event_type_counts.png` | 이벤트 타입별 발생 횟수 막대그래프 |
+| `output/charts/hourly_trend.png` | `월-일 시` 형식으로 표시한 시간대별 이벤트 추이 라인그래프 |
+
+Docker Compose 실행 후 생성된 이미지를 README에서 함께 확인할 수 있습니다.
+
+![Event count by type](output/charts/event_type_counts.png)
+
+![Hourly event trend](output/charts/hourly_trend.png)
