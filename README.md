@@ -4,7 +4,7 @@
 
 ## 현재 브랜치 범위
 
-`part-2-mysql-storage` 브랜치는 Step 2 로그 저장을 추가합니다.
+`part-3-analysis` 브랜치는 Step 3 데이터 집계 분석을 추가합니다.
 
 ## 실행 방법
 
@@ -23,6 +23,7 @@ export MYSQL_DATABASE=events_db
 ```bash
 mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" < sql/init.sql
 python3 app/main.py --count 1000
+python3 app/analyze_events.py
 ```
 
 `app/main.py`는 이벤트를 메모리에서 생성한 뒤 바로 MySQL에 저장합니다.
@@ -66,3 +67,27 @@ CREATE TABLE IF NOT EXISTS events (
 ```
 
 JSON을 통째로 저장하지 않고 이벤트의 주요 필드를 컬럼으로 분리했습니다. 이벤트 타입별 집계, 유저별 집계, 시간대별 집계를 빠르게 수행할 수 있도록 `event_type`, `user_id`, `created_at`에 인덱스를 둡니다.
+
+## 데이터 집계 분석
+
+분석 쿼리는 [sql/analysis.sql](./sql/analysis.sql)에 정리했습니다. `app/analyze_events.py`를 실행하면 MySQL에 저장된 `events` 테이블을 대상으로 같은 집계를 수행하고 결과를 콘솔에 출력합니다.
+
+작성한 분석은 아래 4가지입니다.
+
+| 분석 | 목적 |
+| --- | --- |
+| 이벤트 타입별 발생 횟수 | 사용자 행동이 어떤 이벤트에 집중되는지 확인 |
+| 유저별 총 이벤트 수 | 활동량이 많은 사용자를 확인 |
+| 시간대별 이벤트 추이 | 이벤트가 많이 발생하는 시간대를 확인 |
+| 에러 이벤트 비율 | 전체 이벤트 중 서비스 에러가 차지하는 비중 확인 |
+
+예시 쿼리:
+
+```sql
+SELECT
+    event_type,
+    COUNT(*) AS event_count
+FROM events
+GROUP BY event_type
+ORDER BY event_count DESC;
+```
