@@ -25,7 +25,13 @@ mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$M
 python3 app/main.py --count 1000
 ```
 
-`app/main.py`는 이벤트를 메모리에서 생성한 뒤 바로 MySQL에 저장합니다. `app/generate_events.py`의 JSONL 출력 기능은 생성되는 이벤트 샘플을 확인하기 위한 보조 실행 경로입니다.
+`app/main.py`는 이벤트를 메모리에서 생성한 뒤 바로 MySQL에 저장합니다.
+
+JSONL 파일 생성은 테스트와 샘플 확인용입니다. DB 없이 이벤트 구조를 눈으로 확인하고 싶을 때만 아래 명령어를 사용합니다.
+
+```bash
+python3 app/generate_events.py --count 10 --output output/events.jsonl
+```
 
 Docker Compose로 MySQL까지 자동 실행하는 구성은 다음 브랜치에서 추가할 예정입니다.
 
