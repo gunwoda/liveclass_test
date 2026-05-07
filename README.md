@@ -155,36 +155,19 @@ Kubernetes manifest는 [k8s](./k8s)에 작성했습니다. 실제 클러스터 �
 
 ## 선택 과제 B: AWS
 
-이 파이프라인을 AWS에서 운영한다면 Docker Compose로 구성한 역할을 AWS 관리형 서비스로 나누어 설계할 수 있습니다. draw.io 구성도는 아래 흐름을 기준으로 그리면 됩니다.
+이 파이프라인을 AWS에서 운영한다면 Docker Compose로 구성한 역할을 AWS 관리형 서비스로 나누어 설계할 수 있습니다. 아래 구성도는 이벤트 생성, 저장, 분석, 시각화 흐름과 CI/CD 배포 흐름을 나누어 정리한 것입니다.
 
-```text
-GitHub Actions
-    ↓
-Amazon ECR
-    ↓
-Amazon ECS Fargate
-    ↓
-Amazon RDS for MySQL
-    ↓
-AWS Lambda 또는 ECS Fargate 분석 작업
-    ↓
-Amazon S3
-    ↓
-Amazon QuickSight
+### 전체 아키텍처
 
-CloudWatch는 ECS/Lambda 실행 로그와 에러를 수집합니다.
-```
+![AWS architecture](aws_architecture/aws_architecture.png)
 
-draw.io에서는 왼쪽부터 오른쪽으로 아래 순서의 박스를 배치하면 이해하기 쉽습니다.
+전체 파이프라인은 `GitHub Actions → Amazon ECR → Amazon ECS Fargate → Amazon RDS for MySQL → AWS Lambda 또는 ECS Fargate Task → Amazon S3 → Amazon QuickSight` 흐름으로 설계했습니다. CloudWatch는 각 실행 단계의 로그와 메트릭을 수집해 실패 여부와 에러 원인을 확인하는 역할로 둡니다.
 
-1. `GitHub Actions`: 코드 변경 시 Docker 이미지를 빌드하고 테스트를 실행합니다.
-2. `Amazon ECR`: 빌드된 Python 앱 Docker 이미지를 저장합니다.
-3. `Amazon ECS Fargate`: ECR의 이미지를 사용해 이벤트 생성기 컨테이너를 실행합니다.
-4. `Amazon RDS for MySQL`: 생성된 이벤트를 테이블 형태로 저장합니다.
-5. `AWS Lambda` 또는 `ECS Fargate Task`: 저장된 데이터를 집계하고 차트 이미지를 생성합니다.
-6. `Amazon S3`: 생성된 PNG 차트 파일을 저장합니다.
-7. `Amazon QuickSight`: S3 또는 RDS 데이터를 기반으로 대시보드를 구성합니다.
-8. `Amazon CloudWatch`: 컨테이너 실행 로그, 실패 로그, 실행 시간을 모니터링합니다.
+### CI/CD 파이프라인
+
+![CI/CD pipeline](aws_architecture/cicd_pipeline.png)
+
+CI/CD는 GitHub Actions에서 테스트, Docker 이미지 빌드, 이미지 스캔, ECR push를 수행하고, 배포 단계에서 ECS Fargate의 Task 정의와 서비스를 갱신하는 흐름으로 설계했습니다.
 
 ### AWS 서비스 역할과 선택 이유
 
@@ -199,15 +182,11 @@ draw.io에서는 왼쪽부터 오른쪽으로 아래 순서의 박스를 배치�
 | Amazon QuickSight | 대시보드 시각화 | 운영 환경에서는 PNG 파일뿐 아니라 필터와 기간 조건이 있는 대시보드가 필요할 수 있어 BI 도구로 QuickSight를 사용할 수 있습니다. |
 | Amazon CloudWatch | 로그와 메트릭 수집 | 이벤트 생성 작업 실패 여부, 실행 시간, 에러 로그를 확인하기 위해 필요합니다. |
 
-### CI/CD 흐름
-
-CI/CD는 GitHub Actions와 Amazon ECR, ECS Fargate를 연결하는 방식으로 설계했습니다. `main` 브랜치에 코드가 병합되면 GitHub Actions가 Python 문법 검사와 필요한 테스트를 실행하고, Docker 이미지를 빌드합니다. 빌드된 이미지는 Amazon ECR에 push하고, ECS Fargate에서 사용할 task definition의 이미지 태그를 갱신합니다.
-
-이렇게 하면 로컬에서 직접 서버에 접속해 배포하지 않아도 같은 절차로 새 버전을 배포할 수 있습니다. 또한 문제가 생겼을 때는 ECR에 남아 있는 이전 이미지 태그로 되돌리는 방식도 사용할 수 있습니다.
-
 ### 선택한 AWS 서비스의 역할 차이
 
-GitHub Actions는 코드를 배포 가능한 형태로 만드는 자동화 계층이고, ECR은 그 결과물인 Docker 이미지를 보관하는 저장소입니다. ECS Fargate는 ECR에 저장된 이미지를 실제로 실행하는 컴퓨팅 계층이고, RDS는 이벤트를 보관하는 데이터 저장 계층입니다. S3는 DB처럼 행 단위로 조회하는 저장소가 아니라 차트 이미지나 결과 파일을 보관하는 객체 저장소로 사용합니다. QuickSight는 데이터를 저장하는 곳이 아니라 저장된 데이터를 사람이 보기 쉬운 대시보드로 보여주는 시각화 계층입니다. CloudWatch는 파이프라인 결과를 분석하기 위한 저장소가 아니라, 실행 중 발생한 로그와 장애를 확인하는 운영 관찰 도구입니다.
+GitHub Actions는 코드를 배포 가능한 형태로 만드는 자동화 계층이고, ECR은 그 결과물인 Docker 이미지를 보관하는 저장소입니다. ECS Fargate는 ECR에 저장된 이미지를 실제로 실행하는 컴퓨팅 계층이고, RDS는 이벤트를 보관하는 데이터 저장 계층입니다.
+
+S3는 DB처럼 행 단위로 조회하는 저장소가 아니라 차트 이미지나 결과 파일을 보관하는 객체 저장소로 사용합니다. QuickSight는 데이터를 저장하는 곳이 아니라 저장된 데이터를 사람이 보기 쉬운 대시보드로 보여주는 시각화 계층입니다. CloudWatch는 파이프라인 결과를 분석하기 위한 저장소가 아니라, 실행 중 발생한 로그와 장애를 확인하는 운영 관찰 도구입니다.
 
 ### 설계하면서 가장 고민한 부분
 
