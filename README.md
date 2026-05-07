@@ -4,7 +4,7 @@
 
 ## 현재 브랜치 범위
 
-`part-6-kubernetes` 브랜치는 선택 과제 A Kubernetes manifest와 설명을 추가합니다.
+`part-7-aws-architecture` 브랜치는 선택 과제 B AWS 아키텍처와 CI/CD 예시를 추가합니다.
 
 ## 실행 방법
 
@@ -168,6 +168,21 @@ Kubernetes manifest는 [k8s](./k8s)에 작성했습니다. 실제 클러스터 �
 ![CI/CD pipeline](aws_architecture/cicd_pipeline.png)
 
 CI/CD는 GitHub Actions에서 테스트, Docker 이미지 빌드, 이미지 스캔, ECR push를 수행하고, 배포 단계에서 ECS Fargate의 Task 정의와 서비스를 갱신하는 흐름으로 설계했습니다.
+
+예시 workflow는 [.github/workflows/aws-deploy.yml](./.github/workflows/aws-deploy.yml)에 작성했습니다. `main` 브랜치에 코드가 병합되면 Python 문법 검사를 실행하고, `DEPLOY_TO_AWS` repository variable이 `true`일 때 Docker 이미지를 빌드해 Amazon ECR에 push한 뒤 ECS Fargate 서비스의 Task Definition을 갱신하는 흐름입니다.
+
+실제 AWS 계정에서 사용하려면 아래 값을 GitHub Actions Variables/Secrets로 등록해야 합니다.
+
+| 이름 | 구분 | 설명 |
+| --- | --- |
+| `DEPLOY_TO_AWS` | Variable | AWS 배포 job 실행 여부입니다. `true`로 설정하면 배포 job이 실행됩니다. |
+| `AWS_ROLE_TO_ASSUME` | Secret | GitHub Actions가 AWS에 접근할 때 사용할 IAM Role ARN |
+| `AWS_REGION` | Secret | 배포 리전 |
+| `ECR_REPOSITORY` | Secret | Docker 이미지를 push할 ECR repository 이름 |
+| `ECS_CLUSTER` | Secret | 배포 대상 ECS cluster 이름 |
+| `ECS_SERVICE` | Secret | 배포 대상 ECS service 이름 |
+| `ECS_TASK_DEFINITION` | Secret | 갱신할 ECS task definition 이름 또는 ARN |
+| `ECS_CONTAINER_NAME` | Secret | task definition 안에서 이미지가 교체될 컨테이너 이름 |
 
 ### AWS 서비스 역할과 선택 이유
 
