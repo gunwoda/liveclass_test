@@ -4,11 +4,32 @@
 
 ## 현재 브랜치 범위
 
-`part-3-analysis` 브랜치는 Step 3 데이터 집계 분석을 추가합니다.
+`part-4-docker-compose` 브랜치는 Step 4 Docker Compose 실행 구성을 추가합니다.
 
 ## 실행 방법
 
-MySQL 접속 정보는 환경 변수로 설정합니다.
+Docker Compose로 MySQL과 Python 앱을 함께 실행합니다.
+
+```bash
+docker compose up --build
+```
+
+실행하면 MySQL 컨테이너가 먼저 준비되고, Python 앱이 이벤트 1,000건을 생성한 뒤 MySQL `events` 테이블에 저장합니다.
+
+저장된 데이터를 확인하려면 다른 터미널에서 아래 명령어를 실행합니다.
+
+```bash
+docker compose run --rm app python analyze_events.py
+```
+
+데이터를 초기화하고 처음부터 다시 실행하려면 볼륨까지 삭제합니다.
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+로컬 MySQL을 직접 사용하는 경우에는 접속 정보를 환경 변수로 설정한 뒤 수동 실행할 수 있습니다.
 
 ```bash
 export MYSQL_HOST=127.0.0.1
@@ -16,11 +37,7 @@ export MYSQL_PORT=3306
 export MYSQL_USER=events_user
 export MYSQL_PASSWORD=events_password
 export MYSQL_DATABASE=events_db
-```
 
-테이블은 [sql/init.sql](./sql/init.sql)의 스키마로 생성합니다.
-
-```bash
 mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" < sql/init.sql
 python3 app/main.py --count 1000
 python3 app/analyze_events.py
@@ -33,8 +50,6 @@ JSONL 파일 생성은 테스트와 샘플 확인용입니다. DB 없이 이벤�
 ```bash
 python3 app/generate_events.py --count 10 --output output/events.jsonl
 ```
-
-Docker Compose로 MySQL까지 자동 실행하는 구성은 다음 브랜치에서 추가할 예정입니다.
 
 ## 이벤트 설계
 
@@ -91,3 +106,13 @@ FROM events
 GROUP BY event_type
 ORDER BY event_count DESC;
 ```
+
+## Docker 구성
+
+| 서비스 | 역할 |
+| --- | --- |
+| `db` | MySQL 8.4를 실행하고 `sql/init.sql`로 `events` 테이블을 생성합니다. |
+| `app` | Python 앱을 빌드한 뒤 이벤트 생성과 MySQL 저장을 실행합니다. |
+
+`app` 서비스는 `db`의 healthcheck가 성공한 뒤 실행됩니다. 따라서 `docker compose up --build` 한 번으로 이벤트 생성부터 저장까지 자동으로 동작합니다.
+MySQL은 Compose 내부 네트워크에서만 사용하므로 호스트의 3306 포트를 사용 중이어도 실행할 수 있습니다.
