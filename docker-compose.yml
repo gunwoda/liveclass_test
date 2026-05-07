@@ -6,8 +6,6 @@ services:
       MYSQL_DATABASE: events_db
       MYSQL_USER: events_user
       MYSQL_PASSWORD: events_password
-    ports:
-      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
