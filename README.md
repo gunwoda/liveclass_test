@@ -174,7 +174,7 @@ CI/CD는 GitHub Actions에서 테스트, Docker 이미지 빌드, 이미지 스�
 실제 AWS 계정에서 사용하려면 아래 값을 GitHub Actions Variables/Secrets로 등록해야 합니다.
 
 | 이름 | 구분 | 설명 |
-| --- | --- |
+| --- | --- |  --- |
 | `DEPLOY_TO_AWS` | Variable | AWS 배포 job 실행 여부입니다. `true`로 설정하면 배포 job이 실행됩니다. |
 | `AWS_ROLE_TO_ASSUME` | Secret | GitHub Actions가 AWS에 접근할 때 사용할 IAM Role ARN |
 | `AWS_REGION` | Secret | 배포 리전 |
@@ -187,7 +187,7 @@ CI/CD는 GitHub Actions에서 테스트, Docker 이미지 빌드, 이미지 스�
 ### AWS 서비스 역할과 선택 이유
 
 | 서비스 | 역할 | 선택 이유 |
-| --- | --- | 
+| --- | --- | --- |
 | GitHub Actions | 테스트, Docker 이미지 빌드, ECR push, ECS 배포 자동화 | 사람이 수동으로 이미지를 빌드하고 배포하면 실수가 생기기 쉬우므로 PR/merge 기준으로 같은 절차를 반복 실행하기 위해 사용합니다. |
 | Amazon ECR | Docker 이미지를 저장하는 컨테이너 이미지 저장소 | 현재 앱이 Dockerfile로 패키징되어 있으므로 ECS에서 실행할 이미지를 관리하기에 적합합니다. |
 | Amazon ECS Fargate | 이벤트 생성기 컨테이너 실행 | 서버를 직접 관리하지 않고 컨테이너를 실행할 수 있습니다. 이벤트 생성 작업은 항상 떠 있는 서비스보다 필요할 때 실행되는 작업에 가깝기 때문에 Fargate Task로 운영하기 좋습니다. |
