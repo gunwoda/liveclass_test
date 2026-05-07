@@ -131,7 +131,7 @@ MySQL은 Compose 내부 네트워크에서만 사용하므로 호스트의 3306 
 | 파일 | 내용 |
 | --- | --- |
 | `output/charts/event_type_counts.png` | 이벤트 타입별 발생 횟수 막대그래프 |
-| `output/charts/hourly_trend.png` | 시간대별 이벤트 추이 라인그래프 |
+| `output/charts/hourly_trend.png` | `월-일 시` 형식으로 표시한 시간대별 이벤트 추이 라인그래프 |
 
 Docker Compose 실행 후 생성된 이미지를 README에서 함께 확인할 수 있습니다.
 

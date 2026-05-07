@@ -6,8 +6,42 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
 from analyze_events import ANALYSIS_QUERIES, fetch_query_result
+
+
+def configure_korean_font() -> None:
+    """차트의 한국어 제목과 축 라벨이 깨지지 않도록 한글 폰트를 설정합니다."""
+
+    font_candidates = [
+        "Noto Sans CJK KR",
+        "Noto Sans CJK JP",
+        "NanumGothic",
+        "AppleGothic",
+        "Malgun Gothic",
+    ]
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+
+    for font_name in font_candidates:
+        if font_name in available_fonts:
+            plt.rcParams["font.family"] = font_name
+            break
+
+    plt.rcParams["axes.unicode_minus"] = False
+
+
+def format_hour_label(value) -> str:
+    """시간대 라벨을 월-일-시 형식으로 줄여 표시합니다."""
+
+    if hasattr(value, "strftime"):
+        return value.strftime("%m-%d %H시")
+
+    value_text = str(value)
+    try:
+        return value_text[5:10] + " " + value_text[11:13] + "시"
+    except IndexError:
+        return value_text
 
 
 def save_event_type_chart(conn, output_dir: Path) -> Path:
@@ -22,9 +56,9 @@ def save_event_type_chart(conn, output_dir: Path) -> Path:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.bar(event_types, event_counts, color=["#2563eb", "#16a34a", "#f97316", "#dc2626"])
-    ax.set_title("Event Count by Type")
-    ax.set_xlabel("Event Type")
-    ax.set_ylabel("Count")
+    ax.set_title("이벤트 타입별 발생 횟수")
+    ax.set_xlabel("이벤트 타입")
+    ax.set_ylabel("발생 횟수")
     ax.grid(axis="y", alpha=0.25)
 
     output_path = output_dir / "event_type_counts.png"
@@ -41,14 +75,14 @@ def save_hourly_trend_chart(conn, output_dir: Path) -> Path:
     hour_index = columns.index("event_hour")
     count_index = columns.index("event_count")
 
-    event_hours = [row[hour_index] for row in rows]
+    event_hours = [format_hour_label(row[hour_index]) for row in rows]
     event_counts = [row[count_index] for row in rows]
 
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.plot(event_hours, event_counts, marker="o", color="#0891b2")
-    ax.set_title("Hourly Event Trend")
-    ax.set_xlabel("Hour")
-    ax.set_ylabel("Count")
+    ax.set_title("시간대별 이벤트 추이")
+    ax.set_xlabel("시간")
+    ax.set_ylabel("발생 횟수")
     ax.grid(alpha=0.25)
     ax.tick_params(axis="x", rotation=60)
 
@@ -64,6 +98,7 @@ def save_charts(output_dir: Path) -> list[Path]:
 
     from db import connect_with_retry
 
+    configure_korean_font()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with connect_with_retry() as conn:
